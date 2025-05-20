@@ -14,7 +14,7 @@
 """Core training library for Jax."""
 
 import abc
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 import dataclasses
 import enum
 from typing import Any, Generic, TypeVar
@@ -33,6 +33,8 @@ CHECKPOINT_DIR = "checkpoints"
 TRAINING_COMPLETE_MARKER_FILE = "marker.txt"
 TRAIN_LOG_DIRNAME = "train"
 EVAL_LOG_DIRNAME = "val"
+KERAS_MODEL_SAVEFILE = "model.keras"
+ORBAX_CHECKPOINT_DEFAULT_KEY = "default"
 
 DEFAULT_RNG_SEED = 0
 IN_TRAINER_CONTEXT = False  # Set to true when run from the main trainer.
@@ -44,9 +46,9 @@ DatasetT = TypeVar(
     tf.data.Dataset,
     tuple[tf.data.Dataset, tf.data.Dataset],
     tuple[tf.data.Dataset, Mapping[str, tf.data.Dataset]],
-    iterator.DatasetIterator,
-    tuple[iterator.DatasetIterator, iterator.DatasetIterator],
-    tuple[iterator.DatasetIterator, Mapping[str, iterator.DatasetIterator]],
+    iterator.Iterator,
+    tuple[iterator.Iterator, iterator.Iterator],
+    tuple[iterator.Iterator, Mapping[str, iterator.Iterator]],
 )
 MetaT = TypeVar("MetaT")
 Logs = Any  # Any metric logs returned by the training or evaluation task.
@@ -118,9 +120,9 @@ def run_experiment(
 
 def get_iterators(
     datasets: DatasetT,
-) -> tuple[iterator.DatasetIterator, Mapping[str, iterator.DatasetIterator]]:
+) -> tuple[iterator.Iterator, Mapping[str, iterator.Iterator]]:
   """Creates and unpacks the datasets returned by the task."""
-  if isinstance(datasets, (iterator.DatasetIterator, tf.data.Dataset)):
+  if isinstance(datasets, (iterator.Iterator, tf.data.Dataset)):
     if isinstance(datasets, tf.data.Dataset):
       datasets = iterator.TFDatasetIterator(datasets)
     return datasets, {}
@@ -131,7 +133,7 @@ def get_iterators(
     )
 
   train_dataset, eval_datasets = datasets
-  if isinstance(train_dataset, (iterator.DatasetIterator, tf.data.Dataset)):
+  if isinstance(train_dataset, (iterator.Iterator, tf.data.Dataset)):
     if isinstance(train_dataset, tf.data.Dataset):
       train_dataset = iterator.TFDatasetIterator(train_dataset)
   else:
@@ -141,7 +143,7 @@ def get_iterators(
         f" {type(train_dataset)}."
     )
 
-  if isinstance(eval_datasets, (iterator.DatasetIterator, tf.data.Dataset)):
+  if isinstance(eval_datasets, (iterator.Iterator, tf.data.Dataset)):
     if isinstance(eval_datasets, tf.data.Dataset):
       eval_datasets = iterator.TFDatasetIterator(eval_datasets)
     return train_dataset, {"": eval_datasets}
@@ -160,7 +162,7 @@ def get_iterators(
     }
 
   if not all(
-      isinstance(v, iterator.DatasetIterator) for v in eval_datasets.values()
+      isinstance(v, iterator.Iterator) for v in eval_datasets.values()
   ):
     raise ValueError(
         "Expected all values in the evaluation datasets mapping to be either"
@@ -169,6 +171,15 @@ def get_iterators(
     )
 
   return train_dataset, eval_datasets  # pytype: disable=bad-return-type
+
+
+def get_shape(
+    x: tf.Tensor | tf.SparseTensor | tf.RaggedTensor,
+) -> Sequence[int | None]:
+  """Gets the shape of a dense / sparse / ragged tensor."""
+  if isinstance(x, tf.SparseTensor):
+    return [x.shape[0]] + [None for _ in x.shape[1:]]
+  return x.shape.as_list()
 
 
 def in_tracing_context() -> bool:
