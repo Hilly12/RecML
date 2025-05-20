@@ -21,4 +21,4 @@ jobs:
       - name: Run Pytest
         run: |
           export KERAS_BACKEND=jax
-          pytest -v
+          python -m pytest -v
