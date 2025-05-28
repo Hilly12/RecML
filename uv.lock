@@ -1162,6 +1162,7 @@ dev = [
     { name = "torch", version = "2.7.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
 ]
 jax = [
+    { name = "chex" },
     { name = "clu" },
     { name = "fiddle" },
     { name = "jax" },
@@ -1185,6 +1186,7 @@ dev = [
     { name = "torch", specifier = ">=2.6.0", index = "https://download.pytorch.org/whl/cpu" },
 ]
 jax = [
+    { name = "chex", specifier = ">=0.1.89" },
     { name = "clu", specifier = ">=0.0.12" },
     { name = "fiddle", specifier = ">=0.3.0" },
     { name = "jax", specifier = ">=0.6.0" },
