@@ -30,6 +30,7 @@ import numpy as np
 from recml.core.ops import embedding_ops
 import tensorflow as tf
 
+
 with epy.lazy_imports():
   # pylint: disable=g-import-not-at-top
   from jax_tpu_embedding.sparsecore.lib.nn import embedding
@@ -99,8 +100,6 @@ class SparsecoreEmbedder:
       fixed mapping is used to determine this based on device 0. This may fail
       on newer TPU architectures if the mapping is not updated of if device 0 is
       not a TPU device with a sparsecore.
-    static_buffer_size_multiplier: The multiplier to use for the static buffer
-      size. Defaults to 256.
 
   Example usage:
   ```python
@@ -142,7 +141,6 @@ class SparsecoreEmbedder:
   specs: Mapping[str, EmbeddingSpec]
   optimizer: OptimizerSpec
   sharding_strategy: str = 'MOD'
-  static_buffer_size_multiplier: int = 256
 
   def __post_init__(self):
     self._feature_specs = None
@@ -254,7 +252,6 @@ class SparsecoreEmbedder:
           global_device_count=jax.device_count(),
           num_sc_per_device=self._num_sc_per_device,
           sharding_strategy=self.sharding_strategy,
-          static_buffer_size_multiplier=self.static_buffer_size_multiplier,
           allow_id_dropping=False,
       )
 

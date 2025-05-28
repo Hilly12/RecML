@@ -106,7 +106,9 @@ class KerasTrainer(core.Trainer[KerasTask]):
       self,
       *,
       distribution: (
-          keras.distribution.DataParallel | keras.distribution.ModelParallel
+          keras.distribution.DataParallel
+          | keras.distribution.ModelParallel
+          | None
       ) = None,
       model_dir: str | None = None,
       train_steps: int = 0,
@@ -128,10 +130,7 @@ class KerasTrainer(core.Trainer[KerasTask]):
     # This should be set before any layers are constructed and this is a
     # fallback in case the trainer binary doesn't already do this.
     if (
-        isinstance(
-            distribution,
-            (keras.distribution.DataParallel, keras.distribution.ModelParallel),
-        )
+        distribution is not None
         and keras.distribution.distribution() != distribution
     ):
       if hasattr(distribution, "_auto_shard_dataset"):
@@ -175,6 +174,7 @@ class KerasTrainer(core.Trainer[KerasTask]):
           ),
       ]
     else:
+      self._checkpoint_manager = None
       self._train_callbacks = [
           keras.callbacks.TensorBoard(
               log_dir=os.path.join(model_dir, core.LOG_DIR),
@@ -199,13 +199,13 @@ class KerasTrainer(core.Trainer[KerasTask]):
       ]
 
   def _maybe_get_model_kws(
-      self, task: KerasTask, dataset: keras.Model
+      self, task: KerasTask, dataset: tf.data.Dataset
   ) -> Mapping[str, Any]:
     kws = {}
     if py_utils.has_argument(task.create_model, "input_shapes"):
-      batch = next(iter(dataset))
-      x, *_ = keras.utils.unpack_x_y_sample_weight(batch)
-      kws["input_shapes"]: keras.tree.map_structure(core.get_shape, x)  # pylint: disable=undefined-variable
+      batch_spec = dataset.element_spec
+      x, *_ = keras.utils.unpack_x_y_sample_weight(batch_spec)
+      kws["input_shapes"] = keras.tree.map_structure(core.get_shape, x)
 
     return kws
 

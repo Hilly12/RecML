@@ -174,9 +174,9 @@ def get_iterators(
 
 
 def get_shape(
-    x: tf.Tensor | tf.SparseTensor | tf.RaggedTensor,
+    x: tf.Tensor | tf.SparseTensor | tf.RaggedTensor | tf.TensorSpec,
 ) -> Sequence[int | None]:
-  """Gets the shape of a dense / sparse / ragged tensor."""
+  """Gets the shape of a dense / sparse / ragged tensor or tensor spec."""
   if isinstance(x, tf.SparseTensor):
     return [x.shape[0]] + [None for _ in x.shape[1:]]
   return x.shape.as_list()
